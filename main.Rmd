@@ -1,0 +1,226 @@
+---
+title: "跨代職能生命教育模式 (ICLEM)"
+author: "研究團隊"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    toc: false
+  word_document:
+    toc: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = TRUE, message = FALSE, include = TRUE)
+library(googlesheets4)
+library(psych) 
+library(lavaan)
+library(semPlot)
+library(kableExtra)
+```
+
+## 原始資料
+```{r read_data}
+gs4_auth()
+sheet_ids <- c(
+  "11N94mi_ltaDLIXLVW1X_tBZClQ01JIuRga8b68Hpnzg",
+  "1b5LhG3zU7Ee1vbzIXdoydtFdc-tcMymKkepn31s275c"
+)
+data <- NULL
+for(id in sheet_ids){ 
+  url  <- paste("https://docs.google.com/spreadsheets/d/",id,"/edit",sep="")
+  sheet_data <- read_sheet(url, sheet = "表單回覆 1")
+  if (is.null(data)) {
+    data <- sheet_data
+  } else {
+    names(sheet_data) <- names(data) # 強制對齊名稱
+    data <- rbind(data, sheet_data)
+  }
+}
+
+# 移除timestamp
+data <- data[, -1]
+```
+- 總樣本數：`r nrow(data)` 筆問卷
+- 欄位數：`r ncol(data)` 欄
+
+
+```{r data_preparation}
+# 修改欄位名
+basic <- c('gender','age','edu','role','org','area','generation','join','work_years')
+ai <- paste('ai',seq(1,10),sep='')
+dc <- paste('dc',seq(1,10),sep='')
+ig <- paste('ig',seq(1,10),sep='')
+sf <- paste('sf',seq(1,5),sep='')
+ef <- paste('ef',seq(1,5),sep='')
+rf <- paste('rf',seq(1,5),sep='')
+pf <- paste('pf',seq(1,5),sep='')
+emp <- paste('emp',seq(1,10),sep='')
+cols <- c(basic,ai,dc,ig,sf,ef,rf,pf,emp)
+names(data) <- cols
+
+
+dimension_groups <- list(
+  "AI素養" = ai,
+  "數位能力" = dc,
+  "跨代學習" = ig,
+  "靈性形成" = sf,
+  "情感形成" = ef,
+  "關係形成" = rf,
+  "使命形成" = pf,
+  "永續職涯能力" = emp
+)
+
+short_names <- c("ai", "dc", "ig", "sf", "ef", "rf", "pf", "emp")
+
+# 選項轉換分數
+likert_levels <- c("非常不同意", "不同意", "普通", "同意", "非常同意")
+target_cols <- c(ai, dc, ig, sf, ef, rf, pf, emp)
+data[target_cols] <- lapply(data[target_cols], function(x) {
+  match(x, likert_levels)
+})
+
+
+# 反向題轉換
+reverse <- c('ai4','dc3','ig4','sf4','ef3','rf4','pf4')
+data[reverse] <- 6 - data[reverse]
+
+
+# 基本資料處理
+## 性別 (無序分類) 
+data$gender <- factor(data$gender, levels = c("男", "女"))
+
+## 年齡 (有序分類) 
+data$age[data$age == '20歲以下'] <- '20岁以下'
+data$age[data$age == '21–30歲']  <- '21–30岁'
+data$age[data$age == '31–40歲']  <- '31–40岁'
+data$age[data$age == '41–50歲']  <- '41–50岁'
+data$age[data$age == '51–60歲']  <- '51–60岁'
+data$age[data$age == '61歲以上'] <- '61岁以上'
+
+data$age <- factor(data$age, levels = c("20岁以下", "21–30岁", "31–40岁", "41–50岁", "51–60岁", "61岁以上"),ordered = TRUE)
+
+## 教育程度 (有序分類) 
+data$edu[data$edu == '高中職以下'] <- '高中职以下'
+data$edu[data$edu == '專科']       <- '专科'
+data$edu[data$edu == '大學']       <- '大学'
+data$edu[data$edu == '碩士']       <- '硕士'
+data$edu[data$edu == '博士以上']   <- '博士以上'
+data$edu <- factor(data$edu, levels = c("高中職以下", "專科", "大學", "碩士", "博士以上"),labels = c("高中职以下", "专科", "大学", "硕士", "博士以上"),ordered = TRUE)
+
+
+
+## 身分別
+data$role[data$role == '學生']             <- '学生'
+data$role[data$role == '教師／教育工作者'] <- '教师／教育工作者'
+data$role[data$role == '企業工作者']       <- '企业工作者'
+data$role[data$role == '政府機關人員']     <- '政府机关人员'
+data$role[data$role == '非營利組織工作者'] <- '非营利组织工作者'
+data$role[data$role == '教會同工']         <- '教会同工'
+data$role[data$role == '傳道／牧者']       <- '传道／牧者'
+data$role[data$role == '神學生']           <- '神学生'
+data$role[data$role == '退休人士']         <- '退休人士'
+std_role <- c("学生", "教师／教育工作者", "企业工作者", "政府机关人员", "非营利组织工作者", "教会同工", "传道／牧者", "神学生", "退休人士")
+data$role_raw <- data$role
+data$role[!data$role %in% std_role] <- "其他"
+data$role <- factor(data$role, levels = c(std_role, "其他"))
+
+
+## 所屬場域／機構類型
+data$org[data$org == '學校／教育機構']       <- '学校／教育机构'
+data$org[data$org == '企業']                 <- '企业'
+data$org[data$org == '政府機關']             <- '政府机关'
+data$org[data$org == '非營利組織']           <- '非营利组织'
+data$org[data$org == '教會']                 <- '教会'
+data$org[data$org == '基督教機構']           <- '基督教机构'
+data$org[data$org == '神學院／神學教育機構'] <- '神学院／神学教育机构'
+std_org <- c("学校／教育机构", "企业", "政府机关", "非营利组织", "教会", "基督教机构", "神学院／神学教育机构")
+data$org_raw <- data$org
+data$org[!data$org %in% std_org] <- "其他"
+data$org <- factor(data$org, levels = c(std_org, "其他"))
+
+
+## 受測者所在國家／地區
+data$area[data$area == '臺灣'] <- '台湾'
+data$area[data$area == '香港'] <- '香港'
+data$area[data$area == '澳門'] <- '澳门'
+data$area[data$area == '中國大陸'] <- '中国大陆'
+data$area[data$area == '新加坡'] <- '新加坡'
+data$area[data$area == '馬來西亞'] <- '马来西亚'
+data$area[data$area == '北美地區（美國、加拿大）'] <- '北美地区（美国、加拿大）'
+data$area[data$area == '大洋洲地區（澳洲、紐西蘭）'] <- '大洋洲地区（澳洲、新西兰）'
+data$area[data$area == '歐洲地區'] <- '欧洲地区'
+data$area[data$area == '東南亞其他地區（印尼、泰國、菲律賓、越南等）'] <- '东南亚其他地区（印尼、泰国、菲律宾、越南等）'
+std_area <- c("台湾", "香港", "澳门", "中国大陆", "新加坡", "马来西亚", "北美地区（美国、加拿大）", "大洋洲地区（澳洲、新西兰）", "欧洲地区", "东南亚其他地区（印尼、泰国、菲律宾、越南等）")
+data$area_raw <- data$area
+data$area[!data$area %in% std_area] <- "其他"
+data$area <- factor(data$area, levels = c(std_area, "其他"))
+
+
+## 所屬世代
+data$generation[data$generation == 'Z世代（1997年以後出生）']     <- 'Z世代（1997年以后出生）'
+data$generation[data$generation == 'Y世代／千禧世代（1981–1996年出生）'] <- 'Y世代／千禧世代（1981–1996年出生）'
+data$generation[data$generation == 'X世代（1965–1980年出生）']     <- 'X世代（1965–1980年出生）'
+data$generation[data$generation == '嬰兒潮世代（1946–1964年出生）'] <- '婴儿潮世代（1946–1964年出生）'
+data$generation <- factor(data$generation, 
+                          levels = c("Z世代（1997年以后出生）", "Y世代／千禧世代（1981–1996年出生）", 
+                                     "X世代（1965–1980年出生）", "婴儿潮世代（1946–1964年出生）"),
+                          ordered = TRUE)
+
+## 目前是否參與事工
+data$join <- factor(data$join, levels = c("是", "否"))
+
+## 工作年資
+data$work_years[data$work_years == '未滿1年'] <- '未满1年'
+data$work_years <- factor(data$work_years, 
+                          levels = c("未满1年", "1–3年", "4–6年", "7–10年", "11–15年", "16–20年", "21年以上"),
+                          ordered = TRUE)
+```
+
+## 樣本背景特徵描述
+
+```{r basic_demographics}
+# 1. 定義需要分析的基本資料欄位與其對應的中文名稱
+demo_titles <- c('一、性別', '二、年齡', '三、教育程度', '四、身分別', '五、所屬場域類型', '六、所在國家/地區', '七、所屬世代','八、是否參與教會或基督教機構相關事工', '九、工作年資')
+
+# 建立一個空的大表格，用來合併所有基本資料的統計結果
+demo_summary_table <- data.frame(
+  "背景特徵" = character(),
+  "類別選項" = character(),
+  "人數 (n)" = numeric(),
+  "百分比 (%)" = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# 2. 透過迴圈自動計算每個欄位的次數與百分比
+for (i in 1:length(basic)) {
+  col <- basic[i]
+  title <- demo_titles[i]
+  
+  # 計算次數
+  counts <- table(data[[col]], useNA = "no")
+  # 計算百分比 (乘以 100 並四捨五入到小數點後兩位)
+  percentages <- round(prop.table(counts) * 100, 2)
+  
+  # 轉成 Data Frame 結構
+  df_temp <- data.frame(
+    "背景特徵" = c(title, rep("", length(counts) - 1)), # 只有第一列顯示大標題，其餘留白
+    "類別選項" = names(counts),
+    "人數 (n)" = as.numeric(counts),
+    "百分比 (%)" = as.numeric(percentages),
+    stringsAsFactors = FALSE
+  )
+  
+  # 上下合併至總表
+  demo_summary_table <- rbind(demo_summary_table, df_temp)
+}
+
+# 3. 運用 kableExtra 產出精美、具備學術論文標準的 HTML 結構表格
+kbl(demo_summary_table, 
+    col.names = c("背景特徵項目", "類別選項", "人數 (n)", "百分比 (%)"),
+    caption = "表 2：受訪者人口背景特徵次數分配表", 
+    row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  collapse_rows(columns = 1, valign = "top") # 聰明功能：將同一個大標題的儲存格垂直合併，畫面會極度乾淨
+```
+
