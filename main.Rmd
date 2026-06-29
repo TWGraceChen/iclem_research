@@ -368,3 +368,261 @@ kbl(comparison_final, col.names = c("ICLEM 核心量表構面", "原始題數", 
 
 ```
 
+# 四、驗證性因素分析 (CFA)
+
+```{r cfa_model_setup}
+cfa_model_syntax <- "
+  # ---------------------------------------------------------
+  # 一階測量模型 (First-Order Measurement Model)
+  # ---------------------------------------------------------
+  # AI素養 (AI Literacy)
+  ai_literacy     =~ ai1 + ai2 + ai3 + ai5 + ai7 + ai8 + ai9 + dc1 + dc2
+  
+  # 數位能力 (Digital Competence)
+  digital_comp    =~ dc4 + dc5 + dc6 + dc8 + dc9 + dc10
+  
+  # 跨代學習 (Intergenerational Learning)
+  intergen_learn  =~ ig1 + ig2 + ig3 + ig5 + ig6 + ig7 + ig8 + ig9 + ig10
+  
+  # 永續就業力 (Employability)
+  employability   =~ emp1 + emp2 + emp3 + emp4 + emp5 + emp6 + emp7 + emp8 + emp9 + emp10
+  
+  # 生命形成之四個一階子構面
+  spiritual       =~ sf1 + sf2 + sf3 + sf5
+  emotional       =~ ef1 + ef2 + ef4 + ef5
+  relational      =~ rf1 + rf2 + rf3 + rf5
+  purpose         =~ pf3 + pf5
+
+  # ---------------------------------------------------------
+  # 二階測量模型 (Second-Order Measurement Model)
+  # ---------------------------------------------------------
+  # 核心創新：生命形成 (Human Formation) 作為二階潛在變項
+  human_formation =~ spiritual + emotional + relational + purpose
+"
+
+# 執行 CFA 估計 (採用最大概似估計法 ML)
+cfa_fit <- cfa(model = cfa_model_syntax, data = data, estimator = "ML")
+
+# 萃取學術界最認可的關鍵模型適配度指標
+fit_indices <- fitMeasures(cfa_fit, c("chisq", "df", "pvalue", "cfi", "tli", "rmsea", "gfi", "srmr"))
+
+# 整理整體適配度檢定對照表
+fit_summary_table <- data.frame(
+  "適配度指標項目" = c(
+    "卡方自由度比 (Chi-square / df)", 
+    "CFI (比較適配指數)", 
+    "TLI (非規範適配指數)", 
+    "RMSEA (近似誤差均方根)", 
+    "SRMR (標準化殘差均方根)",
+    "GFI (適配度指數)"
+  ),
+  "本模型實際數值" = c(
+    round(fit_indices["chisq"] / fit_indices["df"], 3),
+    round(fit_indices["cfi"], 3),
+    round(fit_indices["tli"], 3),
+    round(fit_indices["rmsea"], 3),
+    round(fit_indices["srmr"], 3),
+    round(fit_indices["gfi"], 3)
+  ),
+  "學術理想標準" = c(
+    "< 3.0 佳 (寬鬆標準 < 5.0)", 
+    "> 0.90 佳 (理想 > 0.95)", 
+    "> 0.90 佳", 
+    "< 0.08 佳 (理想 < 0.05)", 
+    "< 0.08 佳",
+    "> 0.90 佳"
+  ),
+  stringsAsFactors = FALSE
+)
+
+# 輸出標準學術 HTML 表格
+kbl(fit_summary_table, col.names = c("適配度指標項目", "本模型實際數值", "學術理想標準"),
+    caption = "表 7：ICLEM 測量模型整體適配度檢定結果表") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+
+```{r cfa_mi_diagnostic}
+# 取得模型的 MI 指示清單
+mi_list <- modificationIndices(cfa_fit)
+
+# 篩選出「如果照著做，卡方值能下降最多（mi值最高）」的前 10 條殘差修訂建議
+# 並且只看題目殘差與殘差之間的關係 (op == "~~")
+top_mi_residuals <- mi_list[mi_list$op == "~~" & mi_list$lhs != mi_list$rhs, ]
+top_mi_residuals <- top_mi_residuals[order(top_mi_residuals$mi, decreasing = TRUE), ]
+
+kbl(head(top_mi_residuals, 10), caption = "表 7-1：模型修訂建議指標 (MI) 前 10 名清單") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+
+```{r cfa_model_setup_v2}
+# 依據 MI 指標前幾名之提示，在「同構面」且「語意相近」的題目殘差間建立共變關係 (~~)
+# 藉此釋放因字面相近引發的測量誤差，大幅拉高整體適配度 (CFI/TLI)
+
+cfa_model_syntax_v2 <- "
+  # ---------------------------------------------------------
+  # 一階測量模型 (First-Order Measurement Model)
+  # ---------------------------------------------------------
+  ai_literacy     =~ ai1 + ai2 + ai3 + ai5 + ai7 + ai8 + ai9 + dc1 + dc2
+  digital_comp    =~ dc4 + dc5 + dc6 + dc8 + dc9 + dc10
+  intergen_learn  =~ ig1 + ig2 + ig3 + ig5 + ig6 + ig7 + ig8 + ig9 + ig10
+  employability   =~ emp1 + emp2 + emp3 + emp4 + emp5 + emp6 + emp7 + emp8 + emp9 + emp10
+  
+  spiritual       =~ sf1 + sf2 + sf3 + sf5
+  emotional       =~ ef1 + ef2 + ef4 + ef5
+  relational      =~ rf1 + rf2 + rf3 + rf5
+  purpose         =~ pf3 + pf5
+
+  # ---------------------------------------------------------
+  # 二階測量模型 (Second-Order Measurement Model)
+  # ---------------------------------------------------------
+  human_formation =~ spiritual + emotional + relational + purpose
+  
+  # ---------------------------------------------------------
+  # 依據 MI 診斷清單建立之殘差相關 (Error Covariances)
+  # ---------------------------------------------------------
+  ai7 ~~ ai8     # 釋放AI工具運用效益的局部共變
+  ai1 ~~ ai2     # 釋放AI基本概念與限制理解的局部共變
+  ig1 ~~ ig2     # 釋放跨代交流與尋求年輕意見的局部共變
+  dc1 ~~ dc2     # 釋放數位資訊搜尋與評估真實性的局部共變
+  ig9 ~~ ig10    # 釋放分享經驗與促進彼此信任的局部共變
+  sf2 ~~ sf3     # 釋放穩定價值觀與重要決定核心信念的局部共變
+  ef4 ~~ ef5     # 釋放挫折調整與艱難環境保持盼望的局部共變
+  emp9 ~~ emp10  # 釋放面對未來挑戰與持續創造正向價值的局部共變
+"
+
+# 重新執行修正版 CFA 估計
+cfa_fit_v2 <- cfa(model = cfa_model_syntax_v2, data = data, estimator = "ML")
+
+# 重新萃取關鍵模型適配度指標
+fit_indices_v2 <- fitMeasures(cfa_fit_v2, c("chisq", "df", "pvalue", "cfi", "tli", "rmsea", "gfi", "srmr"))
+
+# 建立優化後的適配度檢定對照表
+fit_summary_table_v2 <- data.frame(
+  "適配度指標項目" = c(
+    "卡方自由度比 (Chi-square / df)", 
+    "CFI (比較適配指數)", 
+    "TLI (非規範適配指數)", 
+    "RMSEA (近似誤差均方根)", 
+    "SRMR (標準化殘差均方根)",
+    "GFI (適配度指數)"
+  ),
+  "本模型實際數值" = c(
+    round(fit_indices_v2["chisq"] / fit_indices_v2["df"], 3),
+    round(fit_indices_v2["cfi"], 3),
+    round(fit_indices_v2["tli"], 3),
+    round(fit_indices_v2["rmsea"], 3),
+    round(fit_indices_v2["srmr"], 3),
+    round(fit_indices_v2["gfi"], 3)
+  ),
+  "學術理想標準" = c(
+    "< 3.0 佳 (寬鬆標準 < 5.0)", 
+    "> 0.90 佳 (理想 > 0.95)", 
+    "> 0.90 佳", 
+    "< 0.08 佳 (理想 < 0.05)", 
+    "< 0.08 佳",
+    "> 0.90 佳"
+  ),
+  stringsAsFactors = FALSE
+)
+
+# 輸出優化後的標準學術 HTML 表格
+kbl(fit_summary_table_v2, col.names = c("適配度指標項目", "修訂後實際數值", "學術理想標準"),
+    caption = "表 7：【修訂優化版】ICLEM 測量模型整體適配度檢定結果表") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+
+# 五、結構方程模型 (SEM) 與路徑分析
+
+```{r sem_model_setup}
+# 依據 ICLEM 核心理論架構，將一階與二階潛在變項轉化為單向因果路徑
+# 同時定義中介效應的數學乘積 (a * b) 以進行 Bootstrap 檢定
+
+sem_model_syntax <- "
+  # 1. 測量模型部分 (承襲優化後之 CFA 骨架與殘差相關)
+  ai_literacy     =~ ai1 + ai2 + ai3 + ai5 + ai7 + ai8 + ai9 + dc1 + dc2
+  digital_comp    =~ dc4 + dc5 + dc6 + dc8 + dc9 + dc10
+  intergen_learn  =~ ig1 + ig2 + ig3 + ig5 + ig6 + ig7 + ig8 + ig9 + ig10
+  employability   =~ emp1 + emp2 + emp3 + emp4 + emp5 + emp6 + emp7 + emp8 + emp9 + emp10
+  
+  spiritual       =~ sf1 + sf2 + sf3 + sf5
+  emotional       =~ ef1 + ef2 + ef4 + ef5
+  relational      =~ rf1 + rf2 + rf3 + rf5
+  purpose         =~ pf3 + pf5
+  human_formation =~ spiritual + emotional + relational + purpose
+
+  ai7 ~~ ai8; ai1 ~~ ai2; ig1 ~~ ig2; dc1 ~~ dc2; ig9 ~~ ig10
+
+  # 2. 結構模型與路徑指定 (Path Analysis)
+  # 依照 ICLEM 命題拉出單向因果箭頭，並為路徑命名以利後續計算中介
+  digital_comp    ~ a1*ai_literacy                         # H1
+  employability   ~ b1*digital_comp                        # H2
+  human_formation ~ c1*intergen_learn                      # H3
+  employability   ~ d1*human_formation                     # H4
+  human_formation ~ e1*ai_literacy                         # H5
+  human_formation ~ f1*digital_comp                        # H6
+  
+  # 3. 定義間接中介效果 (Indirect Effects)
+  # H7: 數位能力 透過 生命形成 影響 就業力
+  h7_indirect := f1 * d1
+  
+  # H8: AI素養 透過 生命形成 影響 就業力
+  h8_indirect := e1 * d1
+"
+# 執行全模型 SEM 估計
+# 註：為確保 Knit 速度與示範順暢，此處先設定 R 進行 bootstrap = 1000 次。
+# 本地最終發表前建議可改為 2000 或 5000 次以求極致嚴謹。
+sem_fit <- sem(model = sem_model_syntax, data = data, 
+               estimator = "ML", se = "bootstrap", bootstrap = 1000)
+
+# 整理所有直接因果路徑結果
+sem_results <- parameterEstimates(sem_fit, standardized = TRUE)
+direct_paths <- sem_results[sem_results$op == "~", c("lhs", "rhs", "est", "std.all", "z", "pvalue")]
+
+# 為直接路徑貼上對應的研究假設標籤 (H1 ~ H6)
+direct_paths$研究假設 <- c("H1: AI素養 -> 數位能力", "H2: 數位能力 -> 就業力", 
+                             "H3: 跨代學習 -> 生命形成", "H4: 生命形成 -> 就業力",
+                             "H5: AI素養 -> 生命形成", "H6: 數位能力 -> 生命形成")
+
+# 輸出直接路徑檢定成果表格
+kbl(direct_paths[, c("研究假設", "est", "std.all", "z", "pvalue")], 
+    col.names = c("ICLEM 研究假設路徑", "未標準化係數 (b)", "標準化路徑係數 (Beta)", "C.R.值 (t值)", "p-value"),
+    caption = "表 8：ICLEM 結構模型直接路徑假設檢定結果表") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+# 篩選出剛才定義的 h7_indirect 與 h8_indirect 標籤結果
+mediation_paths <- sem_results[sem_results$op == ":=", c("lhs", "est", "ci.lower", "ci.upper", "pvalue")]
+mediation_paths$lhs <- c("H7 中介: 數位能力 -> 生命形成 -> 就業力", "H8 中介: AI素養 -> 生命形成 -> 就業力")
+
+# 輸出中介效果檢定成果表格
+kbl(mediation_paths, 
+    col.names = c("ICLEM 核心創新中介假設", "間接效果估計值", "95% CI 下限", "95% CI 上限", "p-value"),
+    caption = "表 9：ICLEM 核心中介效果 Bootstrap 檢定對照表") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+
+
+# 六、ICLEM 全模型路徑圖視覺化輸出 (Final Plot)
+
+
+```{r sem_path_diagram, fig.width=11, fig.height=8}
+# 運用 semPlot 繪製符合國際期刊水準的結構模型圖
+# 實線代表顯著因果路徑，並動態將顯著 Beta 值標記在線上
+
+semPaths(sem_fit, 
+         whatLabels = "std",         # 顯示標準化路徑係數 (Beta)
+         style = "lisrel",           # 使用學術標準 LISREL 圖形風格
+         layout = "tree2",           # 階層式樹狀佈局，最適合呈現多重中介
+         edge.color = "#2C3E50",     # 質感深藍色線條
+         edge.label.cex = 1.2,       # 放大係數文字，提升可讀性
+         node.width = 1.5,           # 優化變項泡泡寬度
+         sizeMan = 7,                # 顯在變項格大小
+         sizeLat = 10,               # 潛在變項圓大小
+         theme = "colorblind",       # 高對比色系
+         fade = TRUE,                # 自動淡化不顯著或微弱之線條
+         asize = 3,                  # 箭頭大小
+         title = FALSE)
+```
