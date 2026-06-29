@@ -8,6 +8,8 @@ output:
     toc: false
   word_document:
     toc: false
+  pdf_document:
+    toc: false
 ---
 
 ```{r setup, include=FALSE}
@@ -19,7 +21,7 @@ library(semPlot)
 library(kableExtra)
 ```
 
-## 原始資料
+# 一、原始資料
 ```{r read_data}
 gs4_auth()
 sheet_ids <- c(
@@ -59,19 +61,7 @@ emp <- paste('emp',seq(1,10),sep='')
 cols <- c(basic,ai,dc,ig,sf,ef,rf,pf,emp)
 names(data) <- cols
 
-
-dimension_groups <- list(
-  "AI素養" = ai,
-  "數位能力" = dc,
-  "跨代學習" = ig,
-  "靈性形成" = sf,
-  "情感形成" = ef,
-  "關係形成" = rf,
-  "使命形成" = pf,
-  "永續職涯能力" = emp
-)
-
-short_names <- c("ai", "dc", "ig", "sf", "ef", "rf", "pf", "emp")
+dimension_names <- c("AI素養","數位能力","跨代學習","靈性形成","情感形成","關係形成","使命形成","永續職涯能力")
 
 # 選項轉換分數
 likert_levels <- c("非常不同意", "不同意", "普通", "同意", "非常同意")
@@ -177,7 +167,7 @@ data$work_years <- factor(data$work_years,
                           ordered = TRUE)
 ```
 
-## 樣本背景特徵描述
+# 二、樣本背景特徵描述
 
 ```{r basic_demographics}
 # 1. 定義需要分析的基本資料欄位與其對應的中文名稱
@@ -218,9 +208,163 @@ for (i in 1:length(basic)) {
 # 3. 運用 kableExtra 產出精美、具備學術論文標準的 HTML 結構表格
 kbl(demo_summary_table, 
     col.names = c("背景特徵項目", "類別選項", "人數 (n)", "百分比 (%)"),
-    caption = "表 2：受訪者人口背景特徵次數分配表", 
+    caption = "表 1：受訪者人口背景特徵次數分配表", 
     row.names = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
-  collapse_rows(columns = 1, valign = "top") # 聰明功能：將同一個大標題的儲存格垂直合併，畫面會極度乾淨
+  collapse_rows(columns = 1, valign = "top")
+```
+
+# 三、探索性因素分析 (EFA)
+
+```{r efa_engine_setup, include=FALSE}
+run_academic_efa <- function(data_matrix, n_factors, fm_method = "pa", rotate_method = "promax", caption_title = "因素負荷量表") {
+  
+  # 1. 執行統計檢定
+  kmo_res <- KMO(data_matrix)
+  bartlett_res <- cortest.bartlett(cor(data_matrix, use="complete.obs"), n = nrow(data_matrix))
+  
+  # 2. 執行 EFA
+  efa_res <- fa(data_matrix, nfactors = n_factors, fm = fm_method, rotate = rotate_method)
+  loadings_df <- as.data.frame(unclass(efa_res$loadings))
+  
+  # 3. 動態命名因素欄位
+  colnames(loadings_df) <- paste0("因素 ", 1:n_factors)
+  
+  # 4. 使用 kableExtra 進行學術級上色 (負荷量 > 0.45 標記為淡藍色背景，突顯核心題)
+  formatted_table <- kbl(round(loadings_df, 3), caption = caption_title, longtable = TRUE) %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+  
+  for (col_idx in 1:n_factors) {
+    formatted_table <- formatted_table %>%
+      column_spec(col_idx + 1, 
+                  background = ifelse(abs(loadings_df[[col_idx]]) >= 0.45, "#E6F2FF", "transparent"),
+                  color = ifelse(abs(loadings_df[[col_idx]]) >= 0.45, "#004085", "#666666"),
+                  bold = ifelse(abs(loadings_df[[col_idx]]) >= 0.45, TRUE, FALSE))
+  }
+  
+  # 回傳包含檢定結果與表格的物件
+  return(list(
+    kmo = round(kmo_res$MSA, 3),
+    p_val = format.pval(bartlett_res$p.value, digits = 3),
+    table = formatted_table,
+    result_obj = efa_res
+  ))
+}
+
+# 範疇一原始與修訂
+tools_orig  <- c(ai, dc, ig)
+ai_clean    <- setdiff(ai, c('ai4', 'ai6', 'ai10'))
+dc_clean    <- setdiff(dc, c('dc3', 'dc7'))
+ig_clean    <- setdiff(ig, c('ig4'))
+tools_clean <- c(ai_clean, dc_clean, ig_clean)
+
+# 範疇二原始與修訂
+hf_orig     <- c(sf, ef, rf, pf)
+sf_clean    <- setdiff(sf, c('sf4'))
+ef_clean    <- setdiff(ef, c('ef3'))
+rf_clean    <- setdiff(rf, c('rf4'))
+pf_clean    <- setdiff(pf, c('pf4', 'pf1', 'pf2'))
+hf_clean    <- c(sf_clean, ef_clean, rf_clean, pf_clean)
+
+# 範疇三原始與修訂
+emp_orig    <- emp
+emp_clean   <- emp
+```
+
+## 1. 原始問卷初步因素結構摸索（未刪題）
+```{r efa_orig}
+# 執行初始 EFA
+efa_tools_init <- run_academic_efa(data[, tools_orig], n_factors = 3, 
+                                   caption_title = "表 2：【原始狀態】AI素養、數位能力與跨代學習之因素負荷量矩陣")
+efa_hf_init    <- run_academic_efa(data[, hf_orig], n_factors = 4, 
+                                   caption_title = "表 3：【原始狀態】生命形成（靈性、情感、關係、使命）之因素負荷量矩陣")
+efa_emp_init   <- run_academic_efa(data[, emp_orig], n_factors = 1, fm_method = "pa", rotate_method = "none", 
+                                   caption_title = "表 4：【原始狀態】永續就業力之因素負荷量矩陣")
+```
+
+- AI素養、數位能力與跨代學習
+  - KMO 取樣適切性檢定：`r efa_tools_init$kmo` (大於 0.9 代表樣本與題目變異極佳)
+  - Bartlett 球形檢定 $p$ 值：`r efa_tools_init$p_val` (呈現顯著，適合進行因素分析)
+  - 預計刪除題目：`r paste(setdiff(tools_orig,tools_clean), collapse = ", ")`
+  `r efa_tools_init$table`
+
+
+- 生命形成 (Human Formation) 二階範疇
+  - KMO 取樣適切性檢定：`r efa_hf_init$kmo`
+  - Bartlett 球形檢定 $p$ 值：`r efa_hf_init$p_val`
+  - 預計刪除題目：`r paste(setdiff(hf_orig,hf_clean), collapse = ", ")`
+  `r efa_hf_init$table`
+
+
+- 依變項：永續就業力 (Employability)
+  - KMO 取樣適切性檢定：`r efa_emp_init$kmo`
+  - 預計刪除題目：無
+  `r efa_emp_init$table`
+
+## 2. 刪題後EFA
+```{r efa_opt}
+# 執行優化後之 EFA
+efa_tools_opt <- run_academic_efa(data[, tools_clean], n_factors = 3, 
+                                  caption_title = "表 2-1：【優化後】AI、數位與跨代之清爽因素負荷量矩陣")
+efa_hf_opt    <- run_academic_efa(data[, hf_clean], n_factors = 4, 
+                                  caption_title = "表 3-1：【優化後】生命形成之清爽因素負荷量矩陣")
+efa_emp_opt   <- run_academic_efa(data[, emp_clean], n_factors = 1, fm_method = "pa", rotate_method = "none", 
+                                  caption_title = "表 4-1：【優化後】永續就業力之因素負荷量矩陣")
+```
+
+- AI素養、數位能力與跨代學習
+  - KMO 取樣適切性檢定：`r efa_tools_opt$kmo` (大於 0.9 代表樣本與題目變異極佳)
+  - Bartlett 球形檢定 $p$ 值：`r efa_tools_opt$p_val` (呈現顯著，適合進行因素分析)
+  `r efa_tools_opt$table`
+
+- 生命形成 (Human Formation) 二階範疇
+  - KMO 取樣適切性檢定：`r efa_hf_opt$kmo`
+  - Bartlett 球形檢定 $p$ 值：`r efa_hf_opt$p_val`
+  `r efa_hf_opt$table`
+
+
+- 依變項：永續就業力 (Employability)
+  - KMO 取樣適切性檢定：`r efa_emp_opt$kmo`
+  `r efa_emp_opt$table`
+
+
+## 3.題目刪除前後對比摘要
+```{r efa_summary}
+# 動態計算與建立對比摘要矩陣
+comparison_df <- data.frame(
+  "核心範疇" = dimension_names,
+  "原始題數" = c(length(ai), length(dc), length(ig), length(sf), length(ef), length(rf), length(pf), length(emp)), 
+  "修訂後題數" = c(length(ai_clean), length(dc_clean), length(ig_clean), 
+                    length(sf_clean), length(ef_clean), length(rf_clean), length(pf_clean), length(emp_clean)),
+  "被剔除之題項" = c(
+    paste(setdiff(ai, ai_clean), collapse = ", "),
+    paste(setdiff(dc, dc_clean), collapse = ", "),
+    paste(setdiff(ig, ig_clean), collapse = ", "),
+    paste(setdiff(sf, sf_clean), collapse = ", "),
+    paste(setdiff(ef, ef_clean), collapse = ", "),
+    paste(setdiff(rf, rf_clean), collapse = ", "),
+    paste(setdiff(pf, pf_clean), collapse = ", "),
+    "無"
+  ),
+  stringsAsFactors = FALSE
+)
+
+# 計算總計列
+total_row <- data.frame(
+  "核心範疇" = "**總計題數 (Total)**",
+  "原始題數" = sum(comparison_df$原始題數), # [cite: 525]
+  "修訂後題數" = sum(comparison_df$修訂後題數),
+  "被剔除之題項" = paste0("共刪除 ", sum(comparison_df$原始題數) - sum(comparison_df$修訂後題數), " 題"),
+  stringsAsFactors = FALSE
+)
+
+comparison_final <- rbind(comparison_df, total_row)
+
+kbl(comparison_final, col.names = c("ICLEM 核心量表構面", "原始題數", "優化後留存題數", "被剔除之題項"),
+    caption = "表 6：ICLEM 跨代職能生命教育問卷構面刪題前後對比摘要表", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  row_spec(nrow(comparison_final), bold = TRUE, background = "#F2F2F2") # 總計列加粗顯著呈現
+
+
 ```
 
