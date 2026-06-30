@@ -608,6 +608,7 @@ display: none;
 </div>
 <div id="二樣本背景特徵描述" class="section level1">
 <h1>二、樣本背景特徵描述</h1>
+受訪者之群體輪廓，藉由人口背景特徵的次數分配，客觀評估樣本代表性（如世代分布、所屬場域等），為後續研究結論的外部效度奠定實證基礎。
 <table class="table table-striped table-hover table-condensed" style="color: black; margin-left: auto; margin-right: auto;">
 <caption>
 表 1：受訪者人口背景特徵次數分配表
@@ -1266,8 +1267,11 @@ X世代（1965–1980年出生）
 </div>
 <div id="三探索性因素分析-efa" class="section level1">
 <h1>三、探索性因素分析 (EFA)</h1>
+<p>透過探索性因素分析（EFA）來摸索潛在變數的結構，及檢驗量表的建構效度，並汰除信效度不佳的題目，以確保測量工具的精準度。</p>
 <div id="原始問卷初步因素結構摸索未刪題" class="section level2">
 <h2>1. 原始問卷初步因素結構摸索（未刪題）</h2>
+<p>建立基準檢驗（Baseline Check），透過 KMO 抽樣適切性與 Bartlett
+球形檢定，評估資料進行因素分析之適切性，並初步識別高交叉負荷或低負荷之題項，作為後續刪題依據。</p>
 <blockquote>
 <p>KMO 取樣適切性檢定：大於 0.9 代表樣本與題目變異極佳<br />
 Bartlett 球形檢定 <span class="math inline">\(p\)</span> 值：&lt; 0.05
@@ -2200,6 +2204,8 @@ emp10
 </div>
 <div id="刪題後efa" class="section level2">
 <h2>2. 刪題後EFA</h2>
+<p>驗證優化後之量表純淨度，於剔除結構模糊之題項後重新運行
+EFA，確認剩餘題項皆能清晰、穩定歸屬於各自潛在因素，確保構面間具備良好之區別效度。</p>
 <ul>
 <li>AI素養、數位能力與跨代學習
 <ul>
@@ -2938,6 +2944,8 @@ emp10
 </div>
 <div id="題目刪除前後對比摘要" class="section level2">
 <h2>3.題目刪除前後對比摘要</h2>
+呈現問卷題項之修訂軌跡（由 60 題精簡至 48
+題），以下為各構面之最終題數配置。
 <table class="table table-striped table-hover table-condensed" style="color: black; margin-left: auto; margin-right: auto;">
 <caption>
 表 6：問卷構面刪題前後對比摘要表
@@ -3091,11 +3099,17 @@ pf1, pf2, pf4
 </div>
 <div id="四驗證性因素分析-cfa" class="section level1">
 <h1>四、驗證性因素分析 (CFA)</h1>
+<p>透過驗證性因素分析（CFA），將實證資料與本研究之理論架構進行擬合，以嚴格檢驗測量模型之整體適配度、收斂效度與組合信度。</p>
 <div id="初始測量模型整體適配度檢定" class="section level2">
 <h2>1. 初始測量模型整體適配度檢定</h2>
+<p>評估理論模型與實際數據之初步契合情形，透過檢視各項適配指標（如 CFI,
+RMSEA
+等）與個別題目之標準化因素負荷量，檢視測量模型中可能存在的潛在誤差。</p>
+<ul>
+<li>評估理論模型與實證數據的宏觀擬合程度
 <table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
-表 7：ICLEM 測量模型整體適配度檢定結果表
+表 7：模型整體適配度檢定結果表
 </caption>
 <thead>
 <tr>
@@ -3198,14 +3212,14 @@ GFI (適配度指數)
 </td>
 </tr>
 </tbody>
-</table>
-<blockquote>
-<p>Loading 都在 <span class="math inline">\(0.50\)</span> 以上，且 <span class="math inline">\(p\)</span>
-值皆顯著時，這代表「個體題目的測量品質是過關的」。</p>
-</blockquote>
+</table></li>
+<li>標準化因素負荷量，用以逐一確認個別題項是否有效收斂於其潛在構面 &gt;
+Loading 都在 <span class="math inline">\(0.50\)</span> 以上，且 <span class="math inline">\(p\)</span>
+值皆顯著時，這代表「個體題目的測量品質是過關的」。</li>
+</ul>
 <table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
-表 7-1：ICLEM 初始測量模型各題項標準化因素負荷量一覽表
+表 7-1：初始模型各題項標準化因素負荷量一覽表
 </caption>
 <thead>
 <tr>
@@ -3781,9 +3795,12 @@ pf5
 </div>
 <div id="模型修訂建議指標-mi" class="section level2">
 <h2>2. 模型修訂建議指標 (MI)</h2>
+提供統計診斷，當初始模型適配度未達理想時，透過修正指標（Modification
+Indices,
+MI），於不違反理論之前提下，識別具釋放潛力之殘差相關，作為優化模型之依據。
 <table class="table table-striped table-hover table-condensed" style="color: black; margin-left: auto; margin-right: auto;">
 <caption>
-表 8：模型修訂建議指標 (MI) 篩選清單 (已自動過濾跨構面錯誤連線)
+表 8：模型修訂建議指標 (MI) 篩選清單
 </caption>
 <thead>
 <tr>
@@ -4079,9 +4096,13 @@ ef5
 </div>
 <div id="優化後模型整體適配度檢定" class="section level2">
 <h2>3. 優化後模型整體適配度檢定</h2>
+<p>最終確立之測量模型，經由 MI
+適度修正後，確認整體適配指標均已達標，確保測量工具具備統計效力，得以進行後續之路徑分析。</p>
+<ul>
+<li>評估理論模型與實證數據的宏觀擬合程度
 <table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
-表 9：【修訂優化版】ICLEM 測量模型整體適配度檢定結果表
+表 9：優化後模型整體適配度檢定結果表
 </caption>
 <thead>
 <tr>
@@ -4184,7 +4205,11 @@ GFI (適配度指數)
 </td>
 </tr>
 </tbody>
-</table>
+</table></li>
+<li>標準化因素負荷量，用以逐一確認個別題項是否有效收斂於其潛在構面 &gt;
+Loading 都在 <span class="math inline">\(0.50\)</span> 以上，且 <span class="math inline">\(p\)</span>
+值皆顯著時，這代表「個體題目的測量品質是過關的」。</li>
+</ul>
 <table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
 表 9-1：優化模型各題項標準化因素負荷量一覽表
@@ -4764,11 +4789,12 @@ pf5
 </div>
 <div id="五結構方程模型-sem-與路徑分析" class="section level1">
 <h1>五、結構方程模型 (SEM) 與路徑分析</h1>
+<p>將具備信效度之測量模型轉化為結構模型，透過同時估算多條直接路徑與中介效應，全面驗證跨代學習、生命形成、AI與數位能力對永續就業力之因果假設，以回應本研究之核心問題。</p>
 <pre><code>## Warning: lavaan-&gt;lav_model_nvcov_bootstrap():  
-##    15 bootstrap runs resulted in nonadmissible solutions.</code></pre>
+##    16 bootstrap runs resulted in nonadmissible solutions.</code></pre>
 <table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
-表 10：直接路徑假設檢定與審判結果表
+表 10：直接路徑假設檢定結果表
 </caption>
 <thead>
 <tr>
@@ -4804,7 +4830,7 @@ H1: AI素養 -&gt; 數位能力
 0.8504177
 </td>
 <td style="text-align:right;">
-8.7233661
+8.4645870
 </td>
 <td style="text-align:right;">
 0.0000000
@@ -4824,10 +4850,10 @@ H2: 數位能力 -&gt; 就業力
 0.2835622
 </td>
 <td style="text-align:right;">
-3.2112348
+3.1843572
 </td>
 <td style="text-align:right;">
-0.0013217
+0.0014508
 </td>
 <td style="text-align:left;">
 <strong><span style="color:#28a745;">★ 顯著成立</span></strong>
@@ -4844,7 +4870,7 @@ H3: 跨代學習 -&gt; 生命形成
 0.7045035
 </td>
 <td style="text-align:right;">
-7.5705436
+7.3661804
 </td>
 <td style="text-align:right;">
 0.0000000
@@ -4864,7 +4890,7 @@ H4: 生命形成 -&gt; 就業力
 0.6859983
 </td>
 <td style="text-align:right;">
-8.9208697
+8.8051239
 </td>
 <td style="text-align:right;">
 0.0000000
@@ -4884,10 +4910,10 @@ H5: AI素養 -&gt; 生命形成
 0.1730841
 </td>
 <td style="text-align:right;">
-1.3676772
+1.3301025
 </td>
 <td style="text-align:right;">
-0.1714132
+0.1834845
 </td>
 <td style="text-align:left;">
 <span>不成立 (無顯著影響)</span>
@@ -4904,10 +4930,10 @@ H6: 數位能力 -&gt; 生命形成
 -0.0046006
 </td>
 <td style="text-align:right;">
--0.0460816
+-0.0462413
 </td>
 <td style="text-align:right;">
-0.9632452
+0.9631179
 </td>
 <td style="text-align:left;">
 <span>不成立 (無顯著影響)</span>
@@ -4924,10 +4950,10 @@ H7: AI素養 -&gt; 就業力
 0.0321720
 </td>
 <td style="text-align:right;">
-0.3129398
+0.3063437
 </td>
 <td style="text-align:right;">
-0.7543264
+0.7593429
 </td>
 <td style="text-align:left;">
 <span>不成立 (無顯著影響)</span>
@@ -4937,7 +4963,7 @@ H7: AI素養 -&gt; 就業力
 </table>
 <table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
-表 11：中介效果 Bootstrap 智能審判對照表
+表 11：中介效果假設檢定結果表
 </caption>
 <thead>
 <tr>
@@ -4970,13 +4996,13 @@ H8 中介: 數位能力 -&gt; 生命形成 -&gt; 就業力
 -0.0028410
 </td>
 <td style="text-align:right;">
--0.1260878
+-0.1247870
 </td>
 <td style="text-align:right;">
-0.1212698
+0.1198627
 </td>
 <td style="text-align:right;">
-0.9630903
+0.9634625
 </td>
 <td style="text-align:left;">
 <span>中介效果不顯著</span>
@@ -4990,13 +5016,13 @@ H9 中介: AI素養 -&gt; 生命形成 -&gt; 就業力
 0.1144387
 </td>
 <td style="text-align:right;">
--0.0484989
+-0.0631611
 </td>
 <td style="text-align:right;">
-0.2731895
+0.2827450
 </td>
 <td style="text-align:right;">
-0.1623275
+0.1823004
 </td>
 <td style="text-align:left;">
 <span>中介效果不顯著</span>
